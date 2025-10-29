@@ -21,20 +21,20 @@ end_month = num2str(month(max(data.Date)) + buffer);
 start_date = strcat(start_year,'-',start_month);
 end_date = strcat(end_year,'-',end_month);
 
-% Sediment trap coordinates
-sedtrap_lon = -89;
-sedtrap_lat = 28;
+% Sediment trap coordinates (mean lat lons from FAIRe_noaa-aoml-ngmt)
+sedtrap_lon = -89.22;
+sedtrap_lat = 28.27;
 
 % Study area limits
 n_lat = '32'; s_lat = '24'; e_lon = '-85'; w_lon = '-93';
 
 % % Getting the data from ERDDAP
 % 8-DAY
-% urlfile=strcat('https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=',n_lat,'&west=',w_lon,'&east=',e_lon,'&south=',s_lat,'&disableProjSubset=on&horizStride=1&time_start=',start_date,'-15T12%3A00%3A00Z&time_end=',end_date,'-15T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf');
+urlfile=strcat('https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_8DAY/SEASCAPES.nc?var=CLASS&var=P&north=',n_lat,'&west=',w_lon,'&east=',e_lon,'&south=',s_lat,'&disableProjSubset=on&horizStride=1&time_start=',start_date,'-15T12%3A00%3A00Z&time_end=',end_date,'-15T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf');
 
 % % Getting the data from ERDDAP
 % % MONTHLY
-urlfile=strcat('https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_MONTH/SEASCAPES.nc?var=CLASS&var=P&north=',n_lat,'&west=',w_lon,'&east=',e_lon,'&south=',s_lat,'&disableProjSubset=on&horizStride=1&time_start=',start_date,'-15T12%3A00%3A00Z&time_end=',end_date,'-15T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf');
+% urlfile=strcat('https://cwcgom.aoml.noaa.gov/thredds/ncss/SEASCAPE_MONTH/SEASCAPES.nc?var=CLASS&var=P&north=',n_lat,'&west=',w_lon,'&east=',e_lon,'&south=',s_lat,'&disableProjSubset=on&horizStride=1&time_start=',start_date,'-15T12%3A00%3A00Z&time_end=',end_date,'-15T12%3A00%3A00Z&timeStride=1&addLatLon=true&accept=netcdf');
 
 options = weboptions('CertificateFilename', '', 'Timeout',180); % this command is necessary in how matlab looks for bigger data files
 websave('dummy.nc',urlfile,options); % note in matlab this saves the url exactly as the file that it is, not a text or html
@@ -100,15 +100,19 @@ end
 % per station (need to generate seascape map first). NOTE: Cross is placed in
 % the lower left corner of the pixel.
 cmap1 = csvread('cmap1.csv'); % color palette for seascapes
+row_number = 9;
 figure();
     m_proj('robinson','lon',[str2num(w_lon) str2num(e_lon)],'lat',[str2num(s_lat) str2num(n_lat)]); 
-    m_pcolor(lon1,lat1, CLASS(:,:,9));
+    m_pcolor(lon1,lat1, CLASS(:,:,row_number));
     colormap(cmap1);
     m_coast('patch',[.7 .7 .7],'edgecolor','none');
     m_grid('tickdir','out','linewi',2);
     h=colorbar;
     scale = [1 33];
     caxis(scale);
+    % Add title using year and month from TIMEVEC
+    title_str = sprintf('Seascapes for %04d-%02d', TIMEVEC(row_number,1), TIMEVEC(row_number,2));
+    title(title_str);
 hold on
     seas_box = find(distance(sedtrap_lat, sedtrap_lon, lat1(:), lon1(:)) < (n_pix/pix_res)); 
     for q=1:size(seas_box,1)
@@ -152,16 +156,16 @@ end
 % --- Right Y-Axis (Secondary) ---
 yyaxis right; % NOW, activate the right axis
 % Plot the total mass flux
-plot(data.Date, data.org_c_flux, 'LineWidth', 2.5, 'Color', 'w'); % Adjust color as needed
+plot(data.Date, data.org_c_flux, 'LineWidth', 2.5, 'Color', 'm'); % Adjust color as needed
 % Set the label for the right axis
 ylabel('Org. C flux');
 
 % Set the axis colors to avoid confusion
 ax = gca;
-ax.YColor = 'w'; % Set right y-axis color to match the line plot
+ax.YColor = 'm'; % Set right y-axis color to match the line plot
 yyaxis left; % Switch back to left
 ax = gca;
-ax.YColor = 'w'; % Set left y-axis color to black (default)
+ax.YColor = 'k'; % Set left y-axis color to black (default)
 
 % Add a legend. Using the original variable names for clarity.
 legend(varNames, 'Location', 'eastoutside');
@@ -172,6 +176,6 @@ ax.XTick = dateshift(min(T.Date), 'start', 'month'):calmonths(1):max(T.Date);
 ax.XTickLabelRotation = 45; % Angle the labels to prevent overlap
 
 % Convert seascape_list to a table with specified column headers
-% seascape_table = array2table(seascape_list, 'VariableNames', {'year', 'month', 'day', 'date_vector', 'class', 'probability'});
-% % Save table to a TSV file 
-% writetable(seascape_table, 'seascape_data_8day.tsv', 'FileType', 'text', 'Delimiter', '\t');
+seascape_table = array2table(seascape_list, 'VariableNames', {'year', 'month', 'day', 'date_vector', 'class', 'probability'});
+% Save table to a TSV file 
+writetable(seascape_table, 'seascape_data_8day.tsv', 'FileType', 'text', 'Delimiter', '\t');
